@@ -1,4 +1,3 @@
-
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import json
@@ -7,7 +6,10 @@ from .solver import solve_quiz
 
 app = FastAPI()
 
-SECRET = "CHANGE_THIS_LATER"
+# CHANGE_THIS_LATER
+# SECRET = "CHANGE_THIS_LATER"
+
+SECRET = "X9r7Q2mP4tL8vB6yW3zH1kA5n"
 
 @app.post("/handle_task")
 async def handle_task(request: Request):
