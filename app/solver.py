@@ -1,6 +1,7 @@
 import asyncio
 from playwright.async_api import async_playwright
 import json
+import numpy as np
 from bs4 import BeautifulSoup
 import httpx
 import re
@@ -200,11 +201,10 @@ async def solve_quiz(payload):
             try:
                 print("[Solver] CSV QUIZ DETECTED")
 
-                # Extract REAL cutoff using browser (JS-rendered)
+                # ----- Get Cutoff -----
                 try:
                     cutoff = await page.eval_on_selector("#cutoff", "el => parseInt(el.innerText)")
                 except:
-                    # fallback to text parsing
                     cutoff = None
                     for line in rendered_text.splitlines():
                         if "Cutoff" in line:
@@ -214,7 +214,7 @@ async def solve_quiz(payload):
 
                 print("[Solver] REAL Cutoff =", cutoff)
 
-                # Extract CSV link using browser
+                # ----- Get CSV Link -----
                 csv_links = await page.eval_on_selector_all(
                     "a", "els => els.map(e => e.href)"
                 )
@@ -232,21 +232,25 @@ async def solve_quiz(payload):
                 csv_url = csv_links[0]
                 print("[Solver] Downloading CSV from:", csv_url)
 
-                # Download CSV
+                # ----- Download CSV -----
                 import pandas as pd
                 from io import StringIO
                 async with httpx.AsyncClient(timeout=30) as client:
                     resp = await client.get(csv_url)
 
-                df = pd.read_csv(StringIO(resp.text))
+                # ✅ CRITICAL FIX: FORCE NO HEADER
+                df = pd.read_csv(StringIO(resp.text), header=None)
 
-                # Compute SUM of values > cutoff
-                col = df.columns[0]
-                answer = int(df[df[col] >= cutoff][col].sum())
+                # ✅ Force numeric
+                df[0] = pd.to_numeric(df[0], errors="coerce")
+                df = df.dropna(subset=[0])
 
-                print("[Solver] CSV answer:", answer)
+                # ✅ Apply cutoff and sum
+                answer = int(df[df[0] >= cutoff][0].sum())
 
-                # Submit
+                print("[Solver] CSV FINAL ANSWER:", answer)
+
+                # ----- Submit -----
                 submit_url = "https://tds-llm-analysis.s-anand.net/submit"
                 response = await submit_answer(
                     submit_url, email, secret, current_url, answer
