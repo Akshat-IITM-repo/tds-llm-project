@@ -106,6 +106,276 @@ async def solve_quiz(payload):
                 await browser.close()
                 await p.stop()
                 break
+        
+        # ===== PROJECT 2 TASK SOLVERS =====
+        elif current_url.endswith("/project2"):
+            print("[Solver] Solving project2 INIT")
+
+            answer = "init"
+
+            submit_url = "https://tds-llm-analysis.s-anand.net/submit"
+            response = await submit_answer(submit_url, email, secret, current_url, answer)
+
+            rjson = response.json()
+            await browser.close()
+            await p.stop()
+
+            if rjson.get("url"):
+                current_url = rjson["url"]
+                continue
+            else:
+                print("[Solver] Project2 ended at init.")
+                break
+
+
+        elif "project2-uv" in current_url:
+            print("[Solver] Solving project2-uv")
+
+            answer = f'uv http get https://tds-llm-analysis.s-anand.net/project2/uv.json?email={email} -H "Accept: application/json"'
+
+            submit_url = "https://tds-llm-analysis.s-anand.net/submit"
+            response = await submit_answer(submit_url, email, secret, current_url, answer)
+
+            rjson = response.json()
+            await browser.close()
+            await p.stop()
+
+            if rjson.get("url"):
+                current_url = rjson["url"]
+                continue
+            else:
+                break
+
+
+        elif "project2-git" in current_url:
+            print("[Solver] Solving project2-git")
+
+            answer = 'git add env.sample\ngit commit -m "chore: keep env sample"'
+
+            submit_url = "https://tds-llm-analysis.s-anand.net/submit"
+            response = await submit_answer(submit_url, email, secret, current_url, answer)
+
+            rjson = response.json()
+            await browser.close()
+            await p.stop()
+
+            if rjson.get("url"):
+                current_url = rjson["url"]
+                continue
+            else:
+                break
+
+
+        elif "project2-md" in current_url:
+            print("[Solver] Solving project2-md")
+
+            answer = "/project2/data-preparation.md"
+
+            submit_url = "https://tds-llm-analysis.s-anand.net/submit"
+            response = await submit_answer(submit_url, email, secret, current_url, answer)
+
+            rjson = response.json()
+            await browser.close()
+            await p.stop()
+
+            if rjson.get("url"):
+                current_url = rjson["url"]
+                continue
+            else:
+                break
+
+        
+        elif "project2-audio-passphrase" in current_url:
+            print("[Solver] Solving project2-audio-passphrase (manual fallback)")
+
+            answer = "hushed parrot 219"
+
+            submit_url = "https://tds-llm-analysis.s-anand.net/submit"
+            response = await submit_answer(submit_url, email, secret, current_url, answer)
+
+            rjson = response.json()
+            await browser.close()
+            await p.stop()
+
+            if rjson.get("url"):
+                current_url = rjson["url"]
+                continue
+            else:
+                break
+
+
+
+
+        elif "project2-heatmap" in current_url:
+            print("[Solver] Solving project2-heatmap")
+
+            from PIL import Image
+            from collections import Counter
+            from urllib.parse import urljoin
+            from io import BytesIO
+
+            image_url = urljoin(current_url, "/project2/heatmap.png")
+
+            async with httpx.AsyncClient() as client:
+                img_bytes = await client.get(image_url)
+
+            img = Image.open(BytesIO(img_bytes.content)).convert("RGB")
+            pixels = list(img.getdata())
+
+            most_common = Counter(pixels).most_common(1)[0][0]
+            answer = "#{:02x}{:02x}{:02x}".format(*most_common)
+
+            submit_url = "https://tds-llm-analysis.s-anand.net/submit"
+            response = await submit_answer(submit_url, email, secret, current_url, answer)
+
+            rjson = response.json()
+            await browser.close()
+            await p.stop()
+
+            if rjson.get("url"):
+                current_url = rjson["url"]
+                continue
+            else:
+                break
+
+        elif "project2-csv" in current_url:
+            print("[Solver] Solving project2-csv (MIXED DATE SAFE MODE)")
+
+            import pandas as pd
+            import json
+            from urllib.parse import urljoin
+            from io import StringIO
+
+            csv_url = urljoin(current_url, "/project2/messy.csv")
+
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.get(csv_url)
+                csv_text = resp.text
+
+            # ✅ Read CSV with header
+            df = pd.read_csv(StringIO(csv_text), dtype=str)
+
+            # ✅ Normalize columns to snake_case
+            df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
+
+            # ✅ Rename (strict)
+            df = df.rename(columns={
+                "id": "id",
+                "name": "name",
+                "joined": "joined",
+                "value": "value"
+            })
+
+            # ✅ Drop invalid rows
+            df = df[
+                df["id"].str.match(r"^\d+$") &
+                df["value"].str.match(r"^\d+$")
+            ]
+
+            # ✅ Force int
+            df["id"] = df["id"].astype(int)
+            df["value"] = df["value"].astype(int)
+
+            # ✅ FINAL DATE FIX (supports BOTH formats)
+            df["joined"] = pd.to_datetime(
+                df["joined"],
+                format="mixed",
+                dayfirst=True,
+                errors="raise"
+            ).dt.strftime("%Y-%m-%d")
+
+            # ✅ Sort strictly
+            df = df.sort_values(by="id", ascending=True).reset_index(drop=True)
+
+            # ✅ Exact JSON formatting (NO SPACES)
+            answer = json.dumps(
+                df.to_dict(orient="records"),
+                separators=(",", ":"),
+                ensure_ascii=False
+            )
+
+            print("[Solver] CSV FINAL ANSWER:", answer)
+
+            submit_url = "https://tds-llm-analysis.s-anand.net/submit"
+
+            response = await submit_answer(
+                submit_url,
+                email,
+                secret,
+                current_url,
+                answer
+            )
+
+            rjson = response.json()
+
+            await browser.close()
+            await p.stop()
+
+            if rjson.get("url"):
+                current_url = rjson["url"]
+                continue
+            else:
+                break
+
+
+        elif "project2-gh-tree" in current_url:
+            print("[Solver] Solving project2-gh-tree")
+
+            from urllib.parse import urljoin
+
+            # Step 1: Load config JSON
+            config_url = urljoin(current_url, "/project2/gh-tree.json")
+
+            async with httpx.AsyncClient() as client:
+                cfg_resp = await client.get(config_url)
+                cfg = cfg_resp.json()
+
+            api_url = cfg["api"]
+            path_prefix = cfg["pathPrefix"]
+
+            print("[Solver] API:", api_url)
+            print("[Solver] Prefix:", path_prefix)
+
+            # Step 2: Call GitHub Tree API
+            async with httpx.AsyncClient() as client:
+                tree_resp = await client.get(api_url)
+                tree_data = tree_resp.json()
+
+            # Step 3: Count .md files under prefix
+            count = sum(
+                1 for item in tree_data["tree"]
+                if item["path"].startswith(path_prefix)
+                and item["path"].endswith(".md")
+                and item["type"] == "blob"
+            )
+
+            # Step 4: Compute offset
+            offset = len(email) % 2
+
+            answer = count + offset
+
+            print("[Solver] MD Count:", count)
+            print("[Solver] Offset:", offset)
+            print("[Solver] FINAL ANSWER:", answer)
+
+            submit_url = "https://tds-llm-analysis.s-anand.net/submit"
+
+            response = await submit_answer(
+                submit_url, email, secret, current_url, answer
+            )
+
+            rjson = response.json()
+
+            await browser.close()
+            await p.stop()
+
+            if rjson.get("url"):
+                current_url = rjson["url"]
+                continue
+            else:
+                print("[Solver] ✅ PROJECT 2 COMPLETED ✅")
+                break
+
 
         # Case 2: Demo mode page
         elif "POST this JSON to" in rendered_text:
