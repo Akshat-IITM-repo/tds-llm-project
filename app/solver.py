@@ -550,4 +550,3 @@ async def solve_quiz(payload):
             break
 
     print("[Solver] Finished solving all quiz tasks.")
-

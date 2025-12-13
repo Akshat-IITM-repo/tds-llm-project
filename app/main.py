@@ -2,7 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 import json
 import asyncio
-from .solver import solve_quiz
+from .solver2 import solve_quiz
 
 app = FastAPI()
 
